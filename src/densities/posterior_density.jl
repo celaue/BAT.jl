@@ -31,24 +31,39 @@ The prior density of `posterior`. The prior may or may not be normalized.
 function getprior end
 
 
-function eval_logval(density::AbstractPosteriorDensity, v::Any, T::Type{<:Real})
-    v_shaped = fixup_variate(varshape(density), v)
-    R = density_logval_type(v_shaped, T)
-    
-    prior_logval = eval_logval(getprior(density), v_shaped, R)
+function logdensityof(density::AbstractPosteriorDensity, v::Any)
+    R = density_valtype(density, v)
+
+    prior_logval = logdensityof(getprior(density), v)
 
     # Don't evaluate likelihood if prior probability is zero. Prevents
     # failures when algorithms try to explore parameter space outside of
     # definition of likelihood (as long as prior is chosen correctly).
     if !is_log_zero(prior_logval, R)
-        likelihood_logval = eval_logval(getlikelihood(density), v_shaped, R)
-        convert(R, likelihood_logval + prior_logval)
+        likelihood_logval = logdensityof(getlikelihood(density), v)
+        convert(R, likelihood_logval + prior_logval)::R
     else
-        log_zero_density(R)
+        log_zero_density(R)::R
     end
 end
 
-eval_logval_unchecked(density::AbstractPosteriorDensity, v::Any) = eval_logval(density, v, default_dlt())
+
+function checked_logdensityof(density::AbstractPosteriorDensity, v::Any)
+    R = density_valtype(density, v)
+
+    prior_logval = checked_logdensityof(getprior(density), v)
+
+    # Don't evaluate likelihood if prior probability is zero. Prevents
+    # failures when algorithms try to explore parameter space outside of
+    # definition of likelihood (as long as prior is chosen correctly).
+    if !is_log_zero(prior_logval, R)
+        likelihood_logval = checked_logdensityof(getlikelihood(density), v)
+        convert(R, likelihood_logval + prior_logval)::R
+    else
+        log_zero_density(R)::R
+    end
+end
+
 
 
 function var_bounds(density::AbstractPosteriorDensity)
@@ -81,6 +96,7 @@ getprior(posterior::PosteriorDensity)::Pr
 Constructors:
 
 * ```PosteriorDensity(likelihood, prior)```
+* ```PosteriorDensity{T<:Real}(likelihood, prior)```
 
 `likelihood` and `prior` must be convertible to an [`AbstractDensity`](@ref).
 
@@ -94,20 +110,22 @@ $(TYPEDFIELDS)
     API and are subject to change without deprecation.
 """
 struct PosteriorDensity{
+    VT<:Real,
+    DT<:Real,
     L<:AbstractDensity,
     P<:AbstractDensity,
+    S<:AbstractValueShape,
     B<:AbstractVarBounds,
-    S<:AbstractValueShape
 } <: AbstractPosteriorDensity
     likelihood::L
     prior::P
-    parbounds::B
     parshapes::S
+    parbounds::B
 end
 
 export PosteriorDensity
 
-function PosteriorDensity(likelihood::Any, prior::Any)
+function PosteriorDensity{VT,DT}(likelihood::Any, prior::Any) where {VT<:Real,DT<:Real}
     li = convert(AbstractDensity, likelihood)
     pr = convert(AbstractDensity, prior)
 
@@ -119,7 +137,21 @@ function PosteriorDensity(likelihood::Any, prior::Any)
 
     li_with_shape = _density_with_shape(li, parshapes, li_shape)
 
-    PosteriorDensity(li_with_shape, pr, parbounds, parshapes)
+    L = typeof(li_with_shape); P = typeof(pr);
+    B = typeof(parbounds); parshapes = typeof(parshapes)
+
+    PosteriorDensity{T,L,P,B,S}(li_with_shape, pr, parbounds, parshapes)
+end
+
+function PosteriorDensity{VT}(likelihood::Any, prior::Any) where {VT<:Real}
+    DT = default_val_numtype(likelihood)
+    PosteriorDensity{VT,DT}(likelihood, prior)
+end
+
+function PosteriorDensity(likelihood::Any, prior::Any)
+    VT = default_val_numtype(likelihood)
+    DT = default_val_numtype(likelihood)
+    PosteriorDensity{VT,DT}(likelihood, prior)
 end
 
 

@@ -70,41 +70,49 @@ function _reshape_realvecs(shape::AbstractValueShape, vs::AbstractVector{<:Abstr
 end
 
 
-unshaped_variate(shape::AbstractValueShape, v::Any) = unshaped(v, shape)
 
-unshaped_variate(shape::Missing, v::Any) = unshaped(v)
+fixup_variate(shape::AbstractValueShape, v::Any) = v
+
+fixup_variate(shape::NamedTupleShape, v::NamedTuple) = shape(unshaped(v, shape))
 
 
+function check_variate end
 
-fixup_variate(shape::ScalarShape{Real}, v::Real) = v
+function ChainRulesCore.rrule(::typeof(check_variate), shape::Any, v::Any)
+    result = check_variate(shape, v)
+    _check_variate_pullback(ΔΩ) = (NoTangent(), NoTangent(), ZeroTangent())
+    return result, _check_variate_pullback
+end
 
-fixup_variate(shape::ScalarShape{Real}, v::AbstractArray{<:Real,0}) = v
+check_variate(shape::ScalarShape{Real}, v::Real) = nothing
 
-function fixup_variate(shape::ArrayShape{<:Real,N}, v::AbstractArray{<:Real,N}) where N
+function check_variate(shape::ArrayShape{<:Real,N}, v::AbstractArray{<:Real,N}) where N
     ndof = length(eachindex(v))
     ndof_expected = totalndof(shape)
     if ndof != ndof_expected
         throw(ArgumentError("Invalid length ($ndof) of variate, target shape  $(shape) has $ndof_expected degrees of freedom"))
     end
-    v
+    nothing
 end
 
-function fixup_variate(shape::NamedTupleShape, v::ShapedAsNT)
+function check_variate(shape::NamedTupleShape, v::ShapedAsNT)
     if !(valshape(v) <= shape)
         throw(ArgumentError("Shape of variate incompatible with target variate shape, with variate of type $(typeof(v)) and expected shape $(shape)"))
     end
-    v
+    nothing
 end
 
-function fixup_variate(shape::NamedTupleShape, v::NamedTuple)
-    unshaped_v = unshaped(v, shape)
-    shape(unshaped_v)
-end
-
-function fixup_variate(shape::Any, v::Any)
+function check_variate(shape::Any, v::Any)
     throw(ArgumentError("Shape of variate incompatible with target variate shape, with variate of type $(typeof(v)) and expected shape $(shape)"))
 end
 
-function fixup_variate(shape::Missing, v::Any)
+function check_variate(shape::Missing, v::Any)
     throw(ArgumentError("Cannot evaluate without value shape information"))
+end
+
+
+match_variate(density::AbstractDensity, v::Any) = v
+
+function match_variate(density::AbstractDensity, v::AbstractArray{T,0}) where T
+    !static_hasmethod(logdensityof, Tuple{typeof(density),eltype(v)}) && static_hasmethod(logdensityof, Tuple{typeof(density),typeof(v)}) ? x : x[]
 end

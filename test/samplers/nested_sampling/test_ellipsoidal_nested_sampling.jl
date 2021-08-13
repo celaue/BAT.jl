@@ -32,7 +32,7 @@ import NestedSamplers
     r = bat_sample(posterior, algorithm);
     smpls = r.result
 
-    @test logvalof(posterior).(smpls.v) ≈ smpls.logd
+    @test logdensityof(posterior).(smpls.v) ≈ smpls.logd
 
     iid = BAT.NamedTupleDist(a=dist)
     iidsamples, chains = bat_sample(iid, IIDSampling());

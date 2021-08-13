@@ -42,10 +42,10 @@ sys.stdout = open(os.devnull, 'w')
     r = bat_sample(posterior, algorithm)
 
     smpls = r.result
-    @test logvalof(posterior).(smpls.v) ≈ smpls.logd
+    @test logdensityof(posterior).(smpls.v) ≈ smpls.logd
 
     uwsmpls = r.uwresult
-    @test logvalof(posterior).(uwsmpls.v) ≈ uwsmpls.logd
+    @test logdensityof(posterior).(uwsmpls.v) ≈ uwsmpls.logd
     @test all(isequal(1), uwsmpls.weight)
 
     @test BAT.likelihood_pvalue(dist, r.result; ess = floor(Int, r.ess)) > 10^-3

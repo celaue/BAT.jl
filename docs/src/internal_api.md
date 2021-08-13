@@ -63,10 +63,10 @@ BAT.bat_sampler
 BAT.bg_R_2sqr
 BAT.create_hypercube
 BAT.create_hyperrectangle
-BAT.density_logval_type
-BAT.proposaldist_logpdf
+BAT.default_val_numtype
+BAT.default_var_numtype
+BAT.density_valtype
 BAT.drop_low_weight_samples
-BAT.eval_logval
 BAT.find_hypercube_centers
 BAT.find_marginalmodes
 BAT.fromuhc
@@ -89,6 +89,7 @@ BAT.modify_hypercube!
 BAT.modify_integrationvolume!
 BAT.partition_space
 BAT.proposal_rand!
+BAT.proposaldist_logpdf
 BAT.reduced_volume_hm
 BAT.repetition_to_weights
 BAT.spatialvolume

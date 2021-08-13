@@ -87,10 +87,10 @@ end
 
 
 struct DistributionTransform{
+    DT <: ContinuousDistribution,
+    DF <: ContinuousDistribution,
     VT <: AbstractValueShape,
     VF <: AbstractValueShape,
-    DT <: ContinuousDistribution,
-    DF <: ContinuousDistribution
 } <: VariateTransform{VT,VF}
     target_dist::DT
     source_dist::DF

@@ -41,6 +41,7 @@ using StaticArrays
 using StatsBase
 using StructArrays
 using Tables
+using Tricks
 using ValueShapes
 
 import AdvancedHMC

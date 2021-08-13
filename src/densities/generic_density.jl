@@ -4,15 +4,7 @@
 """
     GenericDensity{F<:Function} <: AbstractDensity
 
-Constructors:
-
-    GenericDensity(f)
-
-Turns the density function `f` into a BAT-compatible [`AbstractDensity`](@ref).
-The return type of `f(v)` must supported by [`logvalof`](@ref).
-
-It must be safe to execute `f` in parallel on multiple threads and
-processes.
+**Deprecated**
 """
 struct GenericDensity{F<:Function} <: AbstractDensity
     f::F
@@ -21,41 +13,16 @@ end
 Base.convert(::Type{GenericDensity}, f::Function) = GenericDensity(f)
 Base.convert(::Type{AbstractDensity}, f::Function) = GenericDensity(f)
 
-
 Base.parent(density::GenericDensity) = density.f
 
-
-function eval_logval_unchecked(density::GenericDensity, v::Any)
+function DensityInterface.logdensityof(density::GenericDensity, v::Any)
     logvalof(density.f(v))
 end
 
 
 
-"""
-    BAT.LogFuncDensity{F<:Function} <: AbstractDensity
+Base.@deprecated Base.convert(::Type{AbstractDensity}, nt::NamedTuple{(:logdensity,)}) logfuncdensity(nt.logdensity)
 
-*BAT-internal, not part of stable public API.*
-
-Constructors:
-
-    LogFuncDensity(logf::Function)
-
-A density defined by a function that computes it's logarithmic value at given
-points.
-
-It must be safe to execute `f` in parallel on multiple threads and
-processes.
-"""
-struct LogFuncDensity{F<:Function} <: AbstractDensity
-    logf::F
-end
-
-Base.convert(::Type{LogFuncDensity}, nt::NamedTuple{(:logdensity,)}) = LogFuncDensity(nt.logdensity)
-Base.convert(::Type{AbstractDensity}, nt::NamedTuple{(:logdensity,)}) = convert(LogFuncDensity, nt)
-
-function eval_logval_unchecked(density::LogFuncDensity, v::Any)
-    density.logf(v)
-end
 
 
 """
@@ -78,11 +45,13 @@ struct LogFuncDensityWithGrad{F<:Function,G<:Function} <: AbstractDensity
     valgradlogf::G
 end
 
-function eval_logval_unchecked(density::LogFuncDensityWithGrad, v::Any)
+DensityInterface.logdensityof(density::LogFuncDensityWithGrad) = density.logf
+
+function DensityInterface.logdensityof(density::LogFuncDensityWithGrad, v::Any)
     density.logf(v)
 end
 
-function ChainRulesCore.rrule(::typeof(eval_logval_unchecked), density::LogFuncDensityWithGrad, v)
+function ChainRulesCore.rrule(::typeof(DensityInterface.logdensityof), density::LogFuncDensityWithGrad, v)
     value, gradient = density.valgradlogf(v)
     @assert value isa Real
     function lfdwg_pullback(thunked_ΔΩ)
@@ -95,3 +64,10 @@ function ChainRulesCore.rrule(::typeof(eval_logval_unchecked), density::LogFuncD
 end
 
 vjp_algorithm(density::LogFuncDensityWithGrad) = ZygoteAD()
+
+
+function Base.show(io::IO, density::LogFuncDensityWithGrad)
+    print(io, Base.typename(typeof(density)).name, "(")
+    show(io, density.logf)
+    print(io, ")")
+end
