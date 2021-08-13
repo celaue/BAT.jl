@@ -19,9 +19,14 @@ function DensityInterface.logdensityof(density::GenericDensity, v::Any)
     logvalof(density.f(v))
 end
 
+function DensityInterface.logdensityof(density::GenericDensity, v::AbstractArray{<:Any,0})
+    logvalof(density.f(v[]))
+end
 
 
-Base.@deprecated Base.convert(::Type{AbstractDensity}, nt::NamedTuple{(:logdensity,)}) logfuncdensity(nt.logdensity)
+
+
+Base.@deprecated Base.convert(::Type{AbstractDensity}, nt::NamedTuple{(:logdensity,)}) GenericDensity(nt.logdensity)
 
 
 
